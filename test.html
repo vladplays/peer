@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Peer</title>
+   <script src="https://unpkg.com/peerjs@1.0.0/dist/peerjs.min.js"></script>
+</head>
+<body>
+	<h2 style='display:inline-block'>Мой ID: <span id=myid></span></h2>
+	<br/>
+	<input style='padding:1em; font-size:14px' id=otherPeerId type=text placeholder="otherPeerId" >
+	<button style='padding:8px; font-size:25px' onclick="callToNode(document.getElementById('otherPeerId').value)">Вызов</button>
+	<br/>
+	<video id=myVideo muted="muted" width="400px" height="auto" ></video>
+	<br/>
+	<div id=callinfo ></div>
+	<video id=remVideo width="400px" height="auto" ></video>
+<script>
+function send(url, callback){
+	let req=new XMLHttpRequest();
+	req.open('GET', url, true);
+	req.send(null);
+	callback.req=req
+	req.onreadystatechange=callback;
+}
+var callOptions={'iceServers': [
+		{url: 'stun:95.xxx.xx.x9:3479',		
+		username: "user",
+		credential: "xxxxxxxxxx"},
+		{ url: "turn:95.xxx.xx.x9:3478",		
+		username: "user",
+		credential: "xxxxxxxx"}]
+	}; 
+peer= new Peer({config: callOptions}); 
+peer.on('open', function(peerID) {	
+	let req=new XMLHttpRequest();
+	//console.log('/set('+location.href.split('/')[3]+','+'id,'+peerID+')')
+	send('/set('+location.href.split('/')[3]+','+'id,'+peerID+')', function(){});
+	
+	
+	document.getElementById('myid').innerHTML=peerID;			
+});
+var peercall;
+peer.on('call', function(call) {
+	peercall=call;
+	document.getElementById('callinfo').innerHTML="Входящий звонок <button onclick='callanswer()' >Принять</button><button onclick='callcancel()' >Отклонить</button>";
+});
+function callanswer() {
+	navigator.mediaDevices.getUserMedia ({ audio: true, video: false }).then(function(mediaStream) {
+	  var video = document.getElementById('myVideo');		    				  
+	  peercall.answer(mediaStream);
+	  video.srcObject = mediaStream; 
+	  document.getElementById('callinfo').innerHTML="Звонок начат... <button onclick='callclose()' >Завершить звонок</button>"; 
+	  video.onloadedmetadata = function(e) {
+		video.play();
+	  };
+	  setTimeout(function() {
+		  document.getElementById('remVideo').srcObject = peercall.remoteStream; 
+		  document.getElementById('remVideo').onloadedmetadata= function(e){
+			document.getElementById('remVideo').play();
+		  };
+	  },1500); 
+	}).catch(function(err) { console.log(err.name + ": " + err.message); });
+}
+function callToNode(peerId) { //вызов
+  navigator.mediaDevices.getUserMedia ({ audio: true, video: false }).then(function(mediaStream) {
+	  var video = document.getElementById('myVideo');
+	  console.log(peerId)
+	  send('/getName('+peerId+',id)', function(){
+			if(this.readyState!==4)
+				return
+			peerId=this.responseText
+			peercall = peer.call(peerId,mediaStream);
+		
+	  peercall.on('stream', function (stream) {
+			  setTimeout(function() {
+			  document.getElementById('remVideo').srcObject = peercall.remoteStream;
+				  document.getElementById('remVideo').onloadedmetadata= function(e){
+					document.getElementById('remVideo').play();
+				  };
+			  },1500);	
+	  });
+	  });			  
+	  video.srcObject = mediaStream;
+	  video.onloadedmetadata = function(e) {
+		video.play();
+	  };
+	}).catch(function(err){console.log(err.name + ": " + err.message)});
+}
+</script>
+
+</body>
