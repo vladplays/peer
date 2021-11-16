@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Login</title>
+</head>
+<body>
+	<br/>
+	<input style='padding:1em; font-size:14px' id=login type=text placeholder="Имя" >
+	<button style='padding:8px; font-size:25px' onclick="checkForm()">Войти</button>
+	<script>
+		function checkForm(){
+			let input=document.querySelector('#login');
+			input=input.value
+			if(input){
+				let req=new XMLHttpRequest();
+				req.open('GET', '/login/'+input, true);
+				req.send(null);
+				req.onreadystatechange=function(){
+					if(req.readyState!==4)
+						return
+					location.assign(req.responseText);
+				}
+			}
+				
+		}
+	</script>
+</body>
+</html>
